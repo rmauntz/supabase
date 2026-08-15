@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
 
       - name: Query Supabase to keep project active
         run: |
@@ -24,29 +24,37 @@ jobs:
           const projectUrl = 'https://qdyuftmeqaudncfgmrlz.supabase.co';
           const anonKey = process.env.SUPABASE_ANON_KEY;
           
-          console.log('Connecting to Supabase...');
+          console.log('🔍 Connecting to Supabase...');
           console.log('Project URL:', projectUrl);
+          console.log('Anon key length:', anonKey ? anonKey.length : 'MISSING');
+          
+          if (!anonKey) {
+            console.error('❌ SUPABASE_ANON_KEY secret is not set!');
+            process.exit(1);
+          }
           
           const supabase = createClient(projectUrl, anonKey);
           
           (async () => {
             try {
-              console.log('Querying guests_emails table...');
+              console.log('📊 Querying guest_emails table...');
               const { data, error } = await supabase
-                .from('guests_emails')
+                .from('guest_emails')
                 .select('*')
                 .limit(1);
               
               if (error) {
-                console.error('❌ Query error:', error.message);
+                console.error('❌ Query error:', error.code, error.message);
+                console.error('Full error:', JSON.stringify(error, null, 2));
                 process.exit(1);
               }
               
               console.log('✅ Query successful!');
-              console.log('Rows returned:', data?.length || 0);
+              console.log('📈 Rows returned:', data?.length || 0);
               process.exit(0);
             } catch (err) {
               console.error('❌ Exception:', err.message);
+              console.error('Stack:', err.stack);
               process.exit(1);
             }
           })();
