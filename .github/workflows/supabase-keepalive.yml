@@ -12,14 +12,33 @@ jobs:
     steps:
       - name: Query Supabase to keep project active
         run: |
-          curl -X GET \
-            'https://qdyuftwmeauducfgmrlz.supabase.co/rest/v1/guests_emails?limit=1' \
-            -H 'apikey: ${{ secrets.SUPABASE_ANON_KEY }}' \
-            -H 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}' \
-            -w '\nStatus: %{http_code}\n'
-        env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          node -e "
+          const https = require('https');
+          const url = 'https://qdyuftwmeauducfgmrlz.supabase.co/rest/v1/guests_emails?limit=1';
+          const key = '${{ secrets.SUPABASE_ANON_KEY }}';
+          
+          const options = {
+            headers: {
+              'apikey': key,
+              'Authorization': 'Bearer ' + key
+            }
+          };
+          
+          https.get(url, options, (res) => {
+            console.log('Status:', res.statusCode);
+            if (res.statusCode === 200) {
+              console.log('✅ Supabase project pinged successfully');
+              process.exit(0);
+            } else {
+              console.error('❌ Unexpected status code:', res.statusCode);
+              process.exit(1);
+            }
+          }).on('error', (err) => {
+            console.error('❌ Error:', err.message);
+            process.exit(1);
+          });
+          "
 
-      - name: Log success
+      - name: Log timestamp
         if: success()
-        run: echo "✅ Supabase project pinged successfully at $(date)"
+        run: echo "✅ Keep-alive completed at $(date)"
