@@ -1,0 +1,25 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Runs every Monday at 10:00 AM UTC
+    - cron: '0 10 * * 1'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase to keep project active
+        run: |
+          curl -X GET \
+            'https://qdyuftwmeauducfgmrlz.supabase.co/rest/v1/guests_emails?limit=1' \
+            -H 'apikey: ${{ secrets.SUPABASE_ANON_KEY }}' \
+            -H 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}' \
+            -w '\nStatus: %{http_code}\n'
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Log success
+        if: success()
+        run: echo "✅ Supabase project pinged successfully at $(date)"
