@@ -10,34 +10,49 @@ jobs:
   keep-alive:
     runs-on: ubuntu-latest
     steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
       - name: Query Supabase to keep project active
         run: |
-          node -e "
-          const https = require('https');
-          const url = 'https://qdyuftwmeauducfgmrlz.supabase.co/rest/v1/guests_emails?limit=1';
-          const key = '${{ secrets.SUPABASE_ANON_KEY }}';
+          npm install @supabase/supabase-js --silent
+          node << 'EOF'
+          const { createClient } = require('@supabase/supabase-js');
           
-          const options = {
-            headers: {
-              'apikey': key,
-              'Authorization': 'Bearer ' + key
-            }
-          };
+          const projectUrl = 'https://qdyuftmeqaudncfgmrlz.supabase.co';
+          const anonKey = process.env.SUPABASE_ANON_KEY;
           
-          https.get(url, options, (res) => {
-            console.log('Status:', res.statusCode);
-            if (res.statusCode === 200) {
-              console.log('✅ Supabase project pinged successfully');
+          console.log('Connecting to Supabase...');
+          console.log('Project URL:', projectUrl);
+          
+          const supabase = createClient(projectUrl, anonKey);
+          
+          (async () => {
+            try {
+              console.log('Querying guests_emails table...');
+              const { data, error } = await supabase
+                .from('guests_emails')
+                .select('*')
+                .limit(1);
+              
+              if (error) {
+                console.error('❌ Query error:', error.message);
+                process.exit(1);
+              }
+              
+              console.log('✅ Query successful!');
+              console.log('Rows returned:', data?.length || 0);
               process.exit(0);
-            } else {
-              console.error('❌ Unexpected status code:', res.statusCode);
+            } catch (err) {
+              console.error('❌ Exception:', err.message);
               process.exit(1);
             }
-          }).on('error', (err) => {
-            console.error('❌ Error:', err.message);
-            process.exit(1);
-          });
-          "
+          })();
+          EOF
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Log timestamp
         if: success()
